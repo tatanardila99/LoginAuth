@@ -38,12 +38,65 @@ export const register = async (req, res) => { //funcion para el registro
     
 }
 
-export const login = (req, res) => { //Funcion para el login
 
-    const {email, password} = req.body;
 
-    console.log(email, password);
-    res.send('login...');
+export const login = async (req, res) => { //funcion para el login 
+
+    const {email, password} = req.body; //obteniendo el body de la peticion
+
+    try {
+        
+
+        const userFound = await User.findOne({email}); //Buscando el usuario por email en la BD
+
+        //Validando si el usuario existe
+        if(!userFound) {
+            return res.status(400).json(
+                    {message: 'Usuario no encontrado'}
+                );
+        }
+        
+        const passwordCorrect = await bcrypt.compare(password, userFound.password); //Comparando la contraseña 
+
+        //Validando la contraseña
+        if(!passwordCorrect) {
+            return res.status(400).json({
+                "mensaje": "Contraseña incorrecta"
+            })
+        }
+
+        const token = await generateToken({ id: userFound._id});
+        res.cookie('token', token);
+
+        //enviando la respuesta de usuario registrado como json
+        res.json({
+            mensaje: 'Usuario logueado exitosamente',
+            username: userFound.username, //Mostrando el username
+            id: userFound._id,
+            createAt: userFound.createdAt,
+            updateAt: userFound.updatedAt
+        });
+
+
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
+        });
+    }
     
 }
+
+
+
+export const logout = (req, res) => {
+    res.cookie('token', '', {
+        expires: new Date(0),
+    })
+    res.json({
+        message: 'Sesión cerrada'
+    });
+}
+
+
+
 
